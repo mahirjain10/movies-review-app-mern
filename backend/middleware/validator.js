@@ -50,6 +50,24 @@ check("newPassword")
   .isLength({ min: 8, max: 20 })
   .withMessage("Password length should be of min 8 and max 20 charachter")  
 ]
+exports.actorInfoValidator=[
+  check("name")
+  .trim()
+  .notEmpty()
+  .withMessage("Please enter name")
+  .isAlpha('en-US',{ignore: ' '})
+  .withMessage("Please enter alphabet only")
+  .isLength({ min: 3, max: 20 })
+  .withMessage("Name should be greater than 3 and less than 20 charachter"),
+check("about")
+  .trim()
+  .notEmpty()
+  .withMessage("about field is required"),
+  check("gender")
+  .trim()
+  .notEmpty()
+  .withMessage("gender field is required")
+];
 exports.validatorResult = (req, res, next) => {
   const error = validationResult(req).array();
   if (error.length>=1) {

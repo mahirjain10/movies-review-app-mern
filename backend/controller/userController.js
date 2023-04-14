@@ -11,42 +11,48 @@ const { sendResponse } = require("../utils/sendResponse");
 
 exports.signUp = async (req, res, next) => {
   const user = new userModel(req.body);
+try {
   const findUser = await userModel.findOne({ email: req.body.email });
   if (findUser) {
-    console.log("email already exist");
+    console.log("email already exists");
     return sendResponse(res, 409, {
-      message: "email already exists",
+      message: "Email already exists",
     });
   }
-  try {
-    const userSaved=await user.save();
-    console.log(userSaved);
-    const otpValue = generateOtp();
-    const otp = new otpModel({
-      owner: user._id,
-      otp: otpValue,
-    });
-    const transport = mailTransporter();
-    const { ok, error } = await createMailAndSend(
-      transport,
-      "moviesreviewapp@gmail.com",
-      user.email,
-      "otp sent to you",
-      `<p>Your otp is ${otpValue}`
-    );
-    if (!ok) {
-      return sendResponse(res, 400, { message: "error while sending message" });
-    }
-    const otpSuccess=await otp.save();
-    console.log(otpSuccess)
-    console.log("success");
-    sendResponse(res, 201, {
-      message: "account created successfully",
-      user:userSaved
-    });
-  } catch (error) {
-    next(error);
+  const userSaved = await user.save();
+  console.log(userSaved);
+  const otpValue = generateOtp();
+  const otp = new otpModel({
+    owner: user._id,
+    otp: otpValue,
+  });
+  const transport = mailTransporter();
+  const { ok, error } = await createMailAndSend(
+    transport,
+    "moviesreviewapp@gmail.com",
+    user.email,
+    "OTP sent to you",
+    `<p>Your OTP is ${otpValue}`
+  );
+  if (!ok) {
+    console.error(`Error sending email: ${error}`);
+    await otp.remove(); // Remove the OTP if the email cannot be sent
+    await user.remove(); // Remove the user if the email cannot be sent
+    return sendResponse(res, 500, { message: "Error sending OTP email" });
   }
+  const otpSuccess = await otp.save();
+  console.log(otpSuccess);
+  console.log("Success");
+  return sendResponse(res, 201, {
+    message: "Account created successfully",
+    user: userSaved,
+  });
+} catch (error) {
+  console.error(`Error creating user: ${error}`);
+  await user.remove(); // Remove the user if there is an error
+  next(error)
+}
+
 };
 
 exports.verifyOtp = async (req, res, next) => {
@@ -103,9 +109,11 @@ exports.verifyOtp = async (req, res, next) => {
       await user.save();
       return sendResponse(res, 400, { message: "error while sending message" });
     }
+    const jwtToken = jwt.sign({ userId: user._id },process.env.TOKEN_KEY);
     return sendResponse(res, 200, {
       message: "otp matched",
       statusCode: res.statusCode,
+      user: { name: user.name, email: user.email, token: jwtToken },
     });
   } catch (error) {
     next(error);
@@ -268,7 +276,7 @@ exports.signIn = async (req, res, next) => {
     const matched = await bcrypt.compare(password, user.password);
     if (!matched)
       return sendResponse(res, 401, { message: "ircorrect password" });
-    const jwtToken = jwt.sign({ userId: user._id });
+    const jwtToken = jwt.sign({ userId: user._id },process.env.TOKEN_KEY);
     sendResponse(res, 200, {
       user: { name: user.name, email: user.email, token: jwtToken },
       message: "user signed in successfully",
