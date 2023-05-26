@@ -1,37 +1,44 @@
-import { useEffect, useState,createContext, useCallback, useRef} from "react"
-import { useNavigate } from "react-router-dom";
+import {createContext,useContext,useEffect,useState} from 'react'
+import useAPI from '../hooks/useApi';
+import  refreshTokenApi from '../../apis/refreshTokenApi';
+import axios from 'axios';
+import { useRef } from 'react';
+const AuthContext=createContext();
 
-const AuthContext =createContext()
 const AuthProvider=({children})=>{
-    const navigate=useNavigate();
-    const [auth,setAuth]=useState(window.localStorage.getItem('authenticated') || false);
+    const {request}=useAPI(refreshTokenApi)
+    const [isLoggedIn,setIsLoggedIn]=useState(window.localStorage.getItem('isLoggedIn')||false);
+    const isLoggedInRef=useRef(isLoggedIn);
+
+    const setIsLoggedInValueInLS=()=>{
+      window.localStorage.setItem('isLoggedIn',JSON.stringify(isLoggedInRef.current))
+    }
+    const changeValueOfIsLoggedIn=(value)=>{
+      isLoggedInRef.current=value
+      setIsLoggedIn(value);
+    }
+    const removeValueFromLS=()=>{
+      window.localStorage.removeItem('isLoggedIn')
+    }
     
-    const authRef=useRef(auth);
-    const changeAuthValue=useCallback(()=>{
-        console.log(authRef.current)
-        // etAuth()
-        console.log(authRef.current)
-    },[])
+    useEffect(() => {
+        console.log("i am in useEffect");
+        if (isLoggedIn) {
+          console.log("in if of useEffect");
+          const intervalId = setInterval(async () => {
+            request(false);
+          }, 5000);
+          return () => clearInterval(intervalId);
+        }
+      });
+      
 
-    const addAuthValueInLS=(value)=>{
-        console.log("addAuthValueInLS ran")
-        window.localStorage.setItem('authenticated',value)
-    }
-    const removeAuthValueInLS=()=>{
-        window.localStorage.removeItem('authenticated')
-    }
-    // useEffect(()=>{
-    //     if(!auth){
-    //         navigate('/not-found');
-    //     }
-    // },[])
-
-    return(
-        <AuthContext.Provider value={{auth,setAuth,changeAuthValue,addAuthValueInLS,removeAuthValueInLS}}>
+    return (
+        <AuthContext.Provider value={{isLoggedIn,setIsLoggedIn,changeValueOfIsLoggedIn,removeValueFromLS,setIsLoggedInValueInLS}}>
             {children}
         </AuthContext.Provider>
     )
 }
 
-export {AuthProvider};
+export {AuthProvider}
 export default AuthContext;

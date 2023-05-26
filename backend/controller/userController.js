@@ -8,56 +8,61 @@ const { pwdResetModel } = require("../models/resetPassword");
 const { generateOtp, generateRandomByte } = require("../utils/helper");
 const { isValidObjectId } = require("mongoose");
 const { sendResponse } = require("../utils/sendResponse");
+const { clearCookie, setCookie } = require("../utils/cookies");
 
 exports.signUp = async (req, res, next) => {
   const user = new userModel(req.body);
-try {
-  const findUser = await userModel.findOne({ email: req.body.email });
-  if (findUser) {
-    console.log("email already exists");
-    return sendResponse(res, 409, {
-      message: "Email already exists",
+  try {
+    const findUser = await userModel.findOne({ email: req.body.email });
+    if (findUser) {
+      console.log("email already exists");
+      return sendResponse(res, 409, {
+        message: "Email already exists",
+      });
+    }
+    const userSaved = await user.save();
+    console.log(userSaved);
+    const otpValue = generateOtp();
+    const otp = new otpModel({
+      owner: user._id,
+      otp: otpValue,
     });
+    const transport = mailTransporter();
+    const { ok, error } = await createMailAndSend(
+      transport,
+      "moviesreviewapp@gmail.com",
+      user.email,
+      "OTP sent to you",
+      `<p>Your OTP is ${otpValue}`
+    );
+    if (!ok) {
+      console.error(`Error sending email: ${error}`);
+      await otp.remove(); // Remove the OTP if the email cannot be sent
+      await user.remove(); // Remove the user if the email cannot be sent
+      return sendResponse(res, 500, { message: "Error sending OTP email" });
+    }
+    const otpSuccess = await otp.save();
+    console.log(otpSuccess);
+    console.log("Success");
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "17m",
+    });
+    setCookie(res,token)
+    return sendResponse(res, 201, {
+      message: "Account created successfully",
+      user: userSaved,
+    });
+  } catch (error) {
+    console.error(`Error creating user: ${error}`);
+    await user.remove(); // Remove the user if there is an error
+    next(error);
   }
-  const userSaved = await user.save();
-  console.log(userSaved);
-  const otpValue = generateOtp();
-  const otp = new otpModel({
-    owner: user._id,
-    otp: otpValue,
-  });
-  const transport = mailTransporter();
-  const { ok, error } = await createMailAndSend(
-    transport,
-    "moviesreviewapp@gmail.com",
-    user.email,
-    "OTP sent to you",
-    `<p>Your OTP is ${otpValue}`
-  );
-  if (!ok) {
-    console.error(`Error sending email: ${error}`);
-    await otp.remove(); // Remove the OTP if the email cannot be sent
-    await user.remove(); // Remove the user if the email cannot be sent
-    return sendResponse(res, 500, { message: "Error sending OTP email" });
-  }
-  const otpSuccess = await otp.save();
-  console.log(otpSuccess);
-  console.log("Success");
-  return sendResponse(res, 201, {
-    message: "Account created successfully",
-    user: userSaved,
-  });
-} catch (error) {
-  console.error(`Error creating user: ${error}`);
-  await user.remove(); // Remove the user if there is an error
-  next(error)
-}
-
 };
 
 exports.verifyOtp = async (req, res, next) => {
   try {
-    const { owner, otp } = req.body;
+    const owner=req.id
+    const { otp } = req.body;
     if (!isValidObjectId(owner)) {
       return sendResponse(res, 400, {
         message: "invalid object id",
@@ -77,7 +82,7 @@ exports.verifyOtp = async (req, res, next) => {
         statusCode: res.statusCode,
       });
     }
-    const otpData = await otpModel.findOne({ owner });
+    const otpData = await otpModel.findOne({ owner});
     if (!otpData) {
       return sendResponse(res, 404, {
         message: "otp not sent yet",
@@ -109,11 +114,11 @@ exports.verifyOtp = async (req, res, next) => {
       await user.save();
       return sendResponse(res, 400, { message: "error while sending message" });
     }
-    const jwtToken = jwt.sign({ userId: user._id },process.env.TOKEN_KEY);
+    // clearCookie(res);
     return sendResponse(res, 200, {
       message: "otp matched",
       statusCode: res.statusCode,
-      user: { name: user.name, email: user.email, token: jwtToken },
+      user: { name: user.name, email: user.email },
     });
   } catch (error) {
     next(error);
@@ -276,12 +281,52 @@ exports.signIn = async (req, res, next) => {
     const matched = await bcrypt.compare(password, user.password);
     if (!matched)
       return sendResponse(res, 401, { message: "ircorrect password" });
-    const jwtToken = jwt.sign({ userId: user._id },process.env.TOKEN_KEY);
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "17m",
+    });
+
+
+    setCookie(res,token);
     sendResponse(res, 200, {
-      user: { name: user.name, email: user.email, token: jwtToken },
+      user: { name: user.name, email: user.email },
       message: "user signed in successfully",
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+exports.logout = (req, res, next) => {
+  const prevToken = req.cookies.token;
+  if (!prevToken) {
+    return res.status(400).json({ message: "Couldn't find token" });
+  }
+  const user = jwt.verify(prevToken,process.env.JWT_SECRET)
+      if (user) {
+        return sendResponse(res, 400, { message: "Authentication failed" });
+      }
+
+      // res.clearCookie("token");
+      clearCookie(res);
+      // req.cookies[`${user.id}`] =z "";
+      return res.status(200).json({ message: "Successfully Logged Out" });
+};
+
+
+exports.getUser = async (req, res, next) => {
+  const userId = req.id;
+  try{
+    if(!isValidObjectId(userId)){
+      return sendResponse(res,400,{message:"Invalid object id"})
+    }
+    const getUser= await userModel.findById(userId,"-password");
+    if(!getUser){
+      return sendResponse(res,404,{message:"User not found"});
+    }
+    return sendResponse(res,200,{message:"User found",user:getUser})
+  }
+  catch(error){
     next(error);
   }
 };
