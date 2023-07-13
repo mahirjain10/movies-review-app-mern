@@ -5,24 +5,34 @@ import Title from "../form/Title";
 import Container from "../users/Container";
 import FormContainer from "../form/FormContainer";
 import FormNav from "../form/FormNav";
-import { useState, useRef,useContext } from "react";
+import { useState, useRef,useContext,useEffect } from "react";
 import useInputError from "../hooks/useInputError";
 import ErrorLine from "../form/ErrorLine";
 import useAPI from "../hooks/useApi";
 import { ToastContainer } from "react-toastify";
 import ThemeContext from "../context/Theme";
+import ProtectedRouteContext from "../context/ProtectedRouteContext";
 import signIpApi from "../../apis/signInApi";
 import { signInSchema } from "../../validation/formValidation";
+import AuthContext from "../context/AuthContext";
+import { useNavigate, Navigate } from "react-router-dom";
+import resendOtpApi from "../../apis/resendOtpApi";
+
 const SignInForm = () => {
   const [data, setData] = useState({
     email: null,
     password: null,
   });
   const { theme } = useContext(ThemeContext);
-
+  const {changeValue,isSignedUpRef,setValueInLS}= useContext(ProtectedRouteContext);
+  const {isLoggedIn,setIsLoggedIn,changeValueOfIsLoggedIn,removeValueFromLS,setIsLoggedInValueInLS}=useContext(AuthContext)
   const { onInputChangeError, onSubmitError, errorRef } = useInputError(data,signInSchema);
   const dataRef = useRef(data);
-  const { error, disabled, request } = useAPI(signIpApi);
+  const { error: signInError, response: signInResponse, setResponse: setSignInResponse, disabled: signInDisabled, request: signInRequest } = useAPI(signIpApi);
+  const { error: resendOtpError, response: resendOtpResponse, setResponse: setResendOtpResponse,request:resendOtpRequest } = useAPI(resendOtpApi);
+
+  const navigate = useNavigate();
+
   const onInputHandler = async(e) => {
     dataRef.current[e.target.name] = e.target.value;
     setData((prevData) => {
@@ -34,9 +44,29 @@ const SignInForm = () => {
   };
   const onFormSubmit = async (e) => {
     e.preventDefault();
-    onSubmitError(dataRef.current,request)
-    console.log("disavked btn :",disabled)
+    onSubmitError(dataRef.current,signInRequest)
+    console.log("disavked btn :",signInDisabled)
   }
+  useEffect(()=>{
+    if(signInResponse===null){
+      return;
+    }
+    if(signInResponse.data.statusCode===200){
+      changeValue();
+      setValueInLS();
+      changeValueOfIsLoggedIn(true);
+      setIsLoggedInValueInLS();
+      setSignInResponse(null);
+      console.log("is verified : ",signInResponse.data.user.isVerified)
+      if(signInResponse.data.user.isVerified===false){
+        resendOtpRequest(false,{owner:signInResponse.data.user.id});
+        navigate('/auth/otp-verification');
+      }
+      else{
+        navigate('/welcome-page');
+      }
+    }
+  },[signInResponse])
 
   console.log(errorRef)
   return (
@@ -87,7 +117,7 @@ const SignInForm = () => {
         <Button
           className={`${errorRef.current.password === null ? "mt-10" : ""}`}
           type="submit"
-          // disabled={disabled}
+          disabled={signInDisabled}
         >
           Sign In
         </Button>

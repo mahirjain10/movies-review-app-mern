@@ -47,6 +47,7 @@ exports.signUp = async (req, res, next) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "17m",
     });
+    console.log("console logging token from controller : ",token)
     setCookie(res,token)
     return sendResponse(res, 201, {
       message: "Account created successfully",
@@ -61,7 +62,7 @@ exports.signUp = async (req, res, next) => {
 
 exports.verifyOtp = async (req, res, next) => {
   try {
-    const owner=req.id
+    const owner=req.user.id
     const { otp } = req.body;
     if (!isValidObjectId(owner)) {
       return sendResponse(res, 400, {
@@ -197,13 +198,13 @@ exports.forgetPassword = async (req, res, next) => {
         statusCode: res.statusCode,
       });
     }
-    const stringObjId = user._id.toString();
-    console.log(typeof stringObjId);
-    console.log(user._id);
+    // const stringObjId = user._id.toString();
+    // console.log(typeof stringObjId);
+    // console.log(user._id);
     const resetPwdData = await pwdResetModel.findOne({ owner: user._id });
-    console.log("reset pwd data : ", resetPwdData);
+    // console.log("reset pwd data : ", resetPwdData);
     if (resetPwdData) {
-      console.log(typeof user._id);
+      // console.log(typeof user._id);
       const deletedData = await pwdResetModel.findByIdAndRemove(
         resetPwdData._id
       );
@@ -214,7 +215,8 @@ exports.forgetPassword = async (req, res, next) => {
     console.log("user id : ", user._id);
     const pwdResetToken = await pwdResetModel({ owner: user._id, token });
     pwdResetToken.save();
-    const resetPasswordLink = `http:localhost:3000/reset-password?token=${token}?id=${user._id}`;
+    const resetPasswordLink = `http://localhost:3000/auth/reset-password?token=${token}&id=${user._id}`;
+
     var transport = mailTransporter();
     const { ok, error } = await createMailAndSend(
       transport,
@@ -286,17 +288,19 @@ exports.signIn = async (req, res, next) => {
       expiresIn: "17m",
     });
 
-
+    console.log("console logging token from controller : ",token)
     setCookie(res,token);
-    sendResponse(res, 200, {
-      user: { name: user.name, email: user.email },
+    console.log(req.cookies);
+    return sendResponse(res, 200, {
+      user: { name: user.name, email: user.email,isVerified:user.isVerified,id:user._id },
       message: "user signed in successfully",
     });
+ 
   } catch (error) {
     next(error);
   }
 };
-
+// 
 exports.logout = (req, res, next) => {
   const prevToken = req.cookies.token;
   if (!prevToken) {
@@ -315,7 +319,7 @@ exports.logout = (req, res, next) => {
 
 
 exports.getUser = async (req, res, next) => {
-  const userId = req.id;
+  const userId = req.user.id;
   try{
     if(!isValidObjectId(userId)){
       return sendResponse(res,400,{message:"Invalid object id"})

@@ -8,14 +8,19 @@ import { otpSchema } from "../../validation/formValidation";
 import ErrorLine from "../form/ErrorLine";
 import useAPI from "../hooks/useApi";
 import submitOtpApi from "../../apis/submitOtpApi";
-
+import { ToastContainer } from "react-toastify";
+import ThemeContext from "../context/Theme";
+import { useNavigate } from "react-router-dom";
 const OtpVerificationForm = () => {
+  const navigate=useNavigate();
   const { error, response,disabled, request ,setResponse}=useAPI(submitOtpApi);
   const [otp, setOtp] = useState(["", "", "", "", "",""]);
   const [activeInput, setActiveInput] = useState(0);
   const [OtpInputError,setOtpInputError]=useState(null)
   const inputRef = useRef();
   const otpRegex = /^[0-9\s]*$/;
+  const { theme } = useContext(ThemeContext);
+
   const onChangeHandler = (e, index) => {
     if (!otpRegex.test(e.target.value)) {
       console.log(otp);
@@ -56,6 +61,10 @@ const OtpVerificationForm = () => {
         const validData=await otpSchema.validate({otp:otpStr},{abortEarly:false})
         console.log("valid data",validData);
         request(true,{otp:otpStr});
+        console.log(response);
+        if(response.data.statusCode===200){
+          navigate('/welcome-page')
+        }
       }
       catch(error){
         console.log(error)
@@ -68,6 +77,20 @@ const OtpVerificationForm = () => {
       } 
   };
   return (
+    <>
+    <ToastContainer
+    position="top-right"
+    autoClose={5000}
+    hideProgressBar={false}
+    newestOnTop={false}
+    closeOnClick={true}
+    rtl={false}
+    pauseOnFocusLoss
+    draggable={true}
+    pauseOnHover
+    theme={theme}
+  />
+
     <Container>
       <FormContainer className="w-[511px] h-[310px]" onSubmit={handleOtp}>
         <Title className="text-[#FFFFFF] text-xl">
@@ -103,6 +126,7 @@ const OtpVerificationForm = () => {
         </Button>
       </FormContainer>
     </Container>
+    </>
   );
 };
 

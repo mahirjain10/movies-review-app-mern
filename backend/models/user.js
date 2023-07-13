@@ -21,6 +21,12 @@ const userSchema=Schema({
         type:Boolean,
         required:true,
         default:false
+    },
+    role:{
+        type:String,
+        default:'user',
+        enum:['admin','user'],
+        required:true
     }
 })
 

@@ -11,7 +11,7 @@ const useInputError = (inputState,schemaName) => {
       const validData = await schemaName.validate(data, {
         abortEarly: false,
       });
-      console.log({ ...validData });
+      console.log("showing valid data ",{ ...validData });
       if (validData) {
         const keys = Object.keys(validData);
         for (let key of keys) {
@@ -65,7 +65,6 @@ const useInputError = (inputState,schemaName) => {
         errorRef.current[err.path] = err.message;
         setInputError((prev) => {
           let updatedData = { ...prev, [err.path]: err.message };
-        //   console.log("input error in setinput error", inputError);
           return updatedData;
         });
         

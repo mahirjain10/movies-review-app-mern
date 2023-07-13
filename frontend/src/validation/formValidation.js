@@ -13,4 +13,7 @@ let signInSchema =object().shape({
 let otpSchema = object().shape({
     otp:string().required('OTP is required').min(5,'Please enter 6 digit otp')
 })
-export { signUpSchema ,signInSchema,otpSchema};
+let forgetPasswordSchema=object().shape({
+    email:string().required('Email is required').email('Invalid email')
+})
+export { signUpSchema ,signInSchema,otpSchema,forgetPasswordSchema};

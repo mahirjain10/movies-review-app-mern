@@ -20,6 +20,7 @@ import AuthContext from "../context/AuthContext";
 const SignUpForm = () => {
   const navigate = useNavigate();
   const { theme } = useContext(ThemeContext);
+  
   const [data, setData] = useState({
     name: null,
     email: null,

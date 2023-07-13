@@ -27,7 +27,7 @@ const AuthProvider=({children})=>{
           console.log("in if of useEffect");
           const intervalId = setInterval(async () => {
             request(false);
-          }, 5000);
+          }, 1000*60*15);
           return () => clearInterval(intervalId);
         }
       });

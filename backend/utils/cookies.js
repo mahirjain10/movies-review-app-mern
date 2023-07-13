@@ -8,49 +8,16 @@ exports.clearCookie = (res) => {
 };
 
 exports.setCookie = (res,token) => {
-  res.cookie("token", token, {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  });
-  console.log("token : ",token);
-  
+  try{
+    console.log("showing token in cookie function : ",token)
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,                                                                                                                                                                                                                                                                                                                                                                                                                                            
+      sameSite: "strict",
+      maxAge:1000*60*15
+    });
+  }
+  catch(error){ 
+    next(error)
+  }
 };

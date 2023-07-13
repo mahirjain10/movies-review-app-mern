@@ -1,7 +1,7 @@
 const { sendResponse } = require("../utils/sendResponse");
 
 exports.errorHandler = (error, req, res, next) => {
-  console.log(error);
+  console.log("showing error : ",error);
   const errorStatus = error.statusCode || 500;
   const errorMsg = error.message || "Something went wrong";
 

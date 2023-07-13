@@ -7,6 +7,8 @@ require("dotenv").config();
 const connectDB = require("./config/database");
 const userRouter = require("./router/userRouter");
 const actorRouter = require("./router/actorRouter");
+const movieRouter =require('./router/movieRouter')
+const videoUploadRoute=require('./router/videoUpload')
 const { notFoundRoute } = require("./middleware/notFoundRoute");
 const { errorHandler } = require("./middleware/errorHandler");
 const { PORT } = process.env;
@@ -17,6 +19,8 @@ app.use(cookieParser());
 app.use(Express.json());
 app.use("/api/user", userRouter);
 app.use("/api/actor", actorRouter);
+app.use('/api/movie',movieRouter);
+// app.use('/api', videoUploadRoute);
 app.use("/*", notFoundRoute);
 app.use(errorHandler);
 

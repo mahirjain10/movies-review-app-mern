@@ -10,14 +10,20 @@ const useAPI = (apiFunc) => {
     console.log("display :",display);
     if (display) {
       console.log("in if")
-      toastId = toast.info("Submitting form...", {
-        autoClose: false,
-        hideProgressBar: false,
-      });
+      try{
+        toastId = toast.info("Submitting form...", {
+          autoClose: false,
+          hideProgressBar: false,
+        });
+      }
+      catch(error){
+        console.log(error)
+      }
     }
     try {
       setDisabled(true);
       console.log("reached here")
+      console.log("args : ",...args)
       const result = await apiFunc(...args);
       setResponse(result);
       if (display) {
